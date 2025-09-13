@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 放大鏡 App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform-origin: center;
+            transition: transform 0.1s ease-out;
+        }
+
+        .magnifier-border {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            margin: -100px 0 0 -100px;
+            border: 2px solid #FFD700;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            margin: -100px 0 0 -100px;
+            pointer-events: none;
+            z-index: 9;
+        }
+
+        .crosshair-horizontal {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #FFD700;
+            opacity: 0.7;
+        }
+
+        .crosshair-vertical {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: #FFD700;
+            opacity: 0.7;
+        }
+
+        .controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .top-controls {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 20px;
+            pointer-events: auto;
+        }
+
+        .bottom-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            pointer-events: auto;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 25px;
+            padding: 5px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            color: #fff;
+            margin: 0 5px;
+        }
+
+        .zoom-indicator {
+            padding: 0 15px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #fff;
+            line-height: 1.4;
+        }
+
+        .permission-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 100;
+        }
+
+        .permission-content {
+            text-align: center;
+            max-width: 300px;
+        }
+
+        .permission-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .permission-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .permission-subtitle {
+            font-size: 16px;
+            color: #8E8E93;
+            margin-bottom: 20px;
+        }
+
+        .permission-btn {
+            background: #007AFF;
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .permission-btn:hover {
+            background: #0056CC;
+        }
+
+        .permission-note {
+            font-size: 12px;
+            color: #8E8E93;
+        }
+
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.8);
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 權限請求屏幕 -->
+        <div class="permission-screen" id="permissionScreen">
+            <div class="permission-content">
+                <div class="permission-icon">🔍</div>
+                <div class="permission-title">放大鏡</div>
+                <div class="permission-subtitle">需要相機權限才能使用放大鏡功能</div>
+                <button class="permission-btn" onclick="requestCamera()">開啟相機</button>
+                <div class="permission-note">點擊按鈕後請允許瀏覽器存取相機</div>
+            </div>
+        </div>
+
+        <!-- 錯誤訊息 -->
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <div>❌ 無法存取相機</div>
+            <div style="font-size: 14px; margin-top: 10px;">請檢查相機權限或重新整理頁面</div>
+        </div>
+
+        <!-- 主要應用界面 -->
+        <div class="camera-container" id="cameraContainer" style="display: none;">
+            <video class="camera-feed" id="cameraFeed" autoplay muted></video>
+            
+            <!-- 放大鏡邊框 -->
+            <div class="magnifier-border"></div>
+            
+            <!-- 十字線 -->
+            <div class="crosshair">
+                <div class="crosshair-horizontal"></div>
+                <div class="crosshair-vertical"></div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="controls">
+                <!-- 頂部控制 -->
+                <div class="top-controls">
+                    <div class="control-btn" id="flashBtn" onclick="toggleFlash()">💡</div>
+                    <div class="control-btn" onclick="resetView()">🔄</div>
+                    <div class="control-btn" onclick="capturePhoto()">📸</div>
+                </div>
+
+                <!-- 底部控制 -->
+                <div class="bottom-controls">
+                    <div class="zoom-controls">
+                        <div class="zoom-btn" onclick="zoomOut()">−</div>
+                        <div class="zoom-indicator" id="zoomLevel">1.0x</div>
+                        <div class="zoom-btn" onclick="zoomIn()">+</div>
+                    </div>
+                    <div class="control-btn" onclick="toggleRecording()">🎥</div>
+                </div>
+
+                <!-- 使用說明 -->
+                <div class="instructions">
+                    🔍 滾輪縮放 • 👆 拖拽移動 • 💡 手電筒
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stream = null;
+        let currentZoom = 1;
+        let flashEnabled = false;
+        let isRecording = false;
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        let translateX = 0;
+        let translateY = 0;
+
+        const cameraFeed = document.getElementById('cameraFeed');
+        const permissionScreen = document.getElementById('permissionScreen');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const errorMessage = document.getElementById('errorMessage');
+        const flashBtn = document.getElementById('flashBtn');
+        const zoomLevel = document.getElementById('zoomLevel');
+
+        async function requestCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                
+                cameraFeed.srcObject = stream;
+                permissionScreen.style.display = 'none';
+                cameraContainer.style.display = 'block';
+                
+                // 添加手勢控制
+                setupGestures();
+                
+            } catch (error) {
+                console.error('相機錯誤:', error);
+                errorMessage.style.display = 'block';
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function setupGestures() {
+            // 滾輪縮放
+            cameraFeed.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                adjustZoom(delta);
+            });
+
+            // 拖拽移動
+            cameraFeed.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            });
+
+            cameraFeed.addEventListener('mousemove', (e) => {
+                if (isDragging && currentZoom > 1) {
+                    const deltaX = e.clientX - lastX;
+                    const deltaY = e.clientY - lastY;
+                    
+                    translateX += deltaX;
+                    translateY += deltaY;
+                    
+                    updateTransform();
+                    
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                }
+            });
+
+            cameraFeed.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // 觸控支持
+            cameraFeed.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    lastX = e.touches[0].clientX;
+                    lastY = e.touches[0].clientY;
+                }
+            });
+
+            cameraFeed.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (isDragging && e.touches.length === 1 && currentZoom > 1) {
+                    const deltaX = e.touches[0].clientX - lastX;
+                    const deltaY = e.touches[0].clientY - lastY;
+                    
+                    translateX += deltaX;
+                    translateY += deltaY;
+                    
+                    updateTransform();
+                    
+                    lastX = e.touches[0].clientX;
+                    lastY = e.touches[0].clientY;
+                }
+            });
+
+            cameraFeed.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+        }
+
+        function adjustZoom(delta) {
+            currentZoom = Math.max(1, Math.min(5, currentZoom + delta));
+            updateTransform();
+            zoomLevel.textContent = currentZoom.toFixed(1) + 'x';
+        }
+
+        function updateTransform() {
+            const maxTranslateX = (window.innerWidth * (currentZoom - 1)) / 2;
+            const maxTranslateY = (window.innerHeight * (currentZoom - 1)) / 2;
+            
+            translateX = Math.max(Math.min(translateX, maxTranslateX), -maxTranslateX);
+            translateY = Math.max(Math.min(translateY, maxTranslateY), -maxTranslateY);
+            
+            cameraFeed.style.transform = `scale(${currentZoom}) translate(${translateX / currentZoom}px, ${translateY / currentZoom}px)`;
+        }
+
+        function zoomIn() {
+            adjustZoom(0.5);
+        }
+
+        function zoomOut() {
+            adjustZoom(-0.5);
+        }
+
+        function resetView() {
+            currentZoom = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+            zoomLevel.textContent = '1.0x';
+        }
+
+        function toggleFlash() {
+            flashEnabled = !flashEnabled;
+            flashBtn.classList.toggle('active', flashEnabled);
+            
+            if (stream) {
+                const videoTrack = stream.getVideoTracks()[0];
+                if (videoTrack && videoTrack.getCapabilities) {
+                    const capabilities = videoTrack.getCapabilities();
+                    if (capabilities.torch) {
+                        videoTrack.applyConstraints({
+                            advanced: [{ torch: flashEnabled }]
+                        }).catch(console.error);
+                    }
+                }
+            }
+        }
+
+        function capturePhoto() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = cameraFeed.videoWidth;
+            canvas.height = cameraFeed.videoHeight;
+            
+            ctx.drawImage(cameraFeed, 0, 0);
+            
+            const link = document.createElement('a');
+            link.download = `magnifier-photo-${Date.now()}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.8);
+            link.click();
+        }
+
+        function toggleRecording() {
+            isRecording = !isRecording;
+            // 錄製功能可以在未來版本中實現
+            alert(isRecording ? '錄製已開始' : '錄製已停止');
+        }
+
+        // 頁面載入時自動請求相機
+        window.addEventListener('load', () => {
+            // 延遲一點時間讓頁面完全載入
+            setTimeout(requestCamera, 500);
+        });
+    </script>
+</body>
+</html>
